@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>infra_for_devs</RootNamespace>
+    <UserSecretsId>6ec4a9c4-cb5e-44e1-be48-8e0892181766</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
