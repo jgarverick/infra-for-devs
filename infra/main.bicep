@@ -2,86 +2,90 @@ targetScope = 'subscription'
 
 @minLength(1)
 @maxLength(64)
-@description('Name which is used to generate a short unique hash for each resource')
-param name string
+@description('Name of the environment that can be used as part of naming resource convention')
+param environmentName string
 
 @minLength(1)
 @description('Primary location for all resources')
 param location string
 
-var resourceToken = toLower(uniqueString(subscription().id, name, location))
-var tags = { 'azd-env-name': name }
 
-resource resourceGroup 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: '${name}-rg'
+@description('Id of the user or app to assign application roles')
+param principalId string
+
+// Tags that should be applied to all resources.
+// 
+// Note that 'azd-service-name' tags should be applied separately to service host resources.
+// Example usage:
+//   tags: union(tags, { 'azd-service-name': <service name in azure.yaml> })
+var tags = {
+  'azd-env-name': environmentName
+}
+
+var abbrs = loadJsonContent('./abbreviations.json')
+var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
+
+resource rg 'Microsoft.Resources/resourceGroups@2022-09-01' = {
+  name: 'rg-${environmentName}'
   location: location
   tags: tags
 }
 
-var prefix = '${name}-${resourceToken}'
-
-module monitoring './core/monitor/monitoring.bicep' = {
+module monitoring './shared/monitoring.bicep' = {
   name: 'monitoring'
-  scope: resourceGroup
   params: {
     location: location
     tags: tags
-    logAnalyticsName: '${prefix}-logworkspace'
-    applicationInsightsName: '${prefix}-appinsights'
-    applicationInsightsDashboardName: '${prefix}-appinsights-dashboard'
+    logAnalyticsName: '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+    applicationInsightsName: '${abbrs.insightsComponents}${resourceToken}'
   }
+  scope: rg
 }
 
-module storageAccount 'core/storage/storage-account.bicep' = {
-  name: 'storage'
-  scope: resourceGroup
+module dashboard './shared/dashboard-web.bicep' = {
+  name: 'dashboard'
   params: {
-    name: '${toLower(take(replace(prefix, '-', ''), 17))}storage'
-    location: location
-    tags: tags
-  }
-}
-
-module appServicePlan './core/host/appserviceplan.bicep' = {
-  name: 'appserviceplan'
-  scope: resourceGroup
-  params: {
-    name: '${prefix}-plan'
-    location: location
-    tags: tags
-    sku: {
-      name: 'Y1'
-      tier: 'Dynamic'
-    }
-  }
-}
-
-module functionApp 'core/host/functions.bicep' = {
-  name: 'function'
-  scope: resourceGroup
-  params: {
-    name: '${prefix}-function-app'
-    location: location
-    tags: union(tags, { 'azd-service-name': 'api' })
-    alwaysOn: false
-    appSettings: {
-      AzureWebJobsFeatureFlags: 'EnableWorkerIndexing'
-    }
+    name: '${abbrs.portalDashboards}${resourceToken}'
     applicationInsightsName: monitoring.outputs.applicationInsightsName
-    appServicePlanId: appServicePlan.outputs.id
-    runtimeName: 'python'
-    runtimeVersion: '3.10'
-    storageAccountName: storageAccount.outputs.name
+    location: location
+    tags: tags
   }
+  scope: rg
 }
 
-
-module diagnostics 'core/host/app-diagnostics.bicep' = {
-  name: '${name}-functions-diagnostics'
-  scope: resourceGroup
+module registry './shared/registry.bicep' = {
+  name: 'registry'
   params: {
-    appName: functionApp.outputs.name
-    kind: 'functionapp'
-    diagnosticWorkspaceId: monitoring.outputs.logAnalyticsWorkspaceId
+    location: location
+    tags: tags
+    name: '${abbrs.containerRegistryRegistries}${resourceToken}'
   }
+  scope: rg
 }
+
+module keyVault './shared/keyvault.bicep' = {
+  name: 'keyvault'
+  params: {
+    location: location
+    tags: tags
+    name: '${abbrs.keyVaultVaults}${resourceToken}'
+    principalId: principalId
+  }
+  scope: rg
+}
+
+module appsEnv './shared/apps-env.bicep' = {
+  name: 'apps-env'
+  params: {
+    name: '${abbrs.appManagedEnvironments}${resourceToken}'
+    location: location
+    tags: tags
+    applicationInsightsName: monitoring.outputs.applicationInsightsName
+    logAnalyticsWorkspaceName: monitoring.outputs.logAnalyticsWorkspaceName
+  }
+  scope: rg
+}
+
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = registry.outputs.loginServer
+output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
+output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.endpoint

@@ -2,7 +2,7 @@
   "profiles": {
     "infra_for_devs": {
       "commandName": "Project",
-      "commandLineArgs": "--port 7189",
+      "commandLineArgs": "--port 7227",
       "launchBrowser": false
     }
   }

@@ -5,16 +5,16 @@ using Microsoft.Extensions.Logging;
 
 namespace infra_for_devs
 {
-    public class process_upload
+    public class ProcessUpload
     {
-        private readonly ILogger<process_upload> _logger;
+        private readonly ILogger<ProcessUpload> _logger;
 
-        public process_upload(ILogger<process_upload> logger)
+        public ProcessUpload(ILogger<ProcessUpload> logger)
         {
             _logger = logger;
         }
 
-        [Function(nameof(process_upload))]
+        [Function(nameof(ProcessUpload))]
         public async Task Run([BlobTrigger("samples-workitems/{name}", Connection = "")] Stream stream, string name)
         {
             using var blobStreamReader = new StreamReader(stream);

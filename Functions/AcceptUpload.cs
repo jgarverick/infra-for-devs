@@ -5,16 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace infra_for_devs
 {
-    public class manage_upload
+    public class AcceptUpload
     {
-        private readonly ILogger<manage_upload> _logger;
+        private readonly ILogger<AcceptUpload> _logger;
 
-        public manage_upload(ILogger<manage_upload> logger)
+        public AcceptUpload(ILogger<AcceptUpload> logger)
         {
             _logger = logger;
         }
 
-        [Function("manage_upload")]
+        [Function("AcceptUpload")]
         public IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
         {
             _logger.LogInformation("C# HTTP trigger function processed a request.");

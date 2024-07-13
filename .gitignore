@@ -5,8 +5,8 @@
 local.settings.json
 __azurite*
 __blobstorage*
-__tablestorage*
 __queuestorage*
+__tablestorage*
 # User-specific files
 *.suo
 *.user
